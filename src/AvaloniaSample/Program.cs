@@ -11,8 +11,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
+using Serilog;
 
 namespace AvaloniaSample
 {
@@ -23,41 +25,72 @@ namespace AvaloniaSample
         [SupportedOSPlatform("linux")]
         [SupportedOSPlatform("macos")]
         [RequiresDynamicCode("Calls Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder()")]
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
-            var hostBuilder = Host.CreateApplicationBuilder();
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile(path: "appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile(path: "serilog.json", optional: false, reloadOnChange: true)
+                .Build();
+            Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration).CreateLogger();
+            try
+            {
+                var hostBuilder = Host.CreateApplicationBuilder();
 
-            // config IConfiguration
-            hostBuilder.Configuration
-                .AddCommandLine(args)
-                .AddEnvironmentVariables()
-                .AddInMemoryCollection();
+                // config IConfiguration
+                hostBuilder.Configuration
+                    .AddCommandLine(args)
+                    .AddEnvironmentVariables()
+                    .AddInMemoryCollection();
 
-            // config ILogger
-            hostBuilder.Services.AddLogging(builder => builder.AddConsole());
-            // add some services
-            hostBuilder.Services.AddSingleton<ISomeService, SomeService>();
+                // config ILogger
+                hostBuilder.Services.AddLogging(builder =>
+                {
+                    builder.ClearProviders();
+                    builder.SetMinimumLevel(LogLevel.Trace);
+                    builder.AddSerilog();
+                });
+                // add some services
+                hostBuilder.Services.AddSingleton<ISomeService, SomeService>();
 
-            #region app default (support aot)
-            RunAppDefault(hostBuilder, args);
-            #endregion
+                #region app default (support aot)
 
-            #region app without mainwindow (support aot with adding <Assembly Name="AvaloniaSample" Dynamic="Required All"/> to rd.xml)
-            //RunAppWithoutMainWindow(hostBuilder, args);
-            #endregion
+                //RunAppDefault(hostBuilder, args);
 
-            #region app with serviceprovider (support aot)
-            //RunAppWithServiceProvider(hostBuilder, args);
-            #endregion
+                #endregion
+
+                #region app without mainwindow (support aot with adding <Assembly Name="AvaloniaSample" Dynamic="Required All"/> to rd.xml)
+
+                //RunAppWithoutMainWindow(hostBuilder, args);
+
+                #endregion
+
+                #region app with serviceprovider (support aot)
+
+                RunAppWithServiceProvider(hostBuilder, args);
+
+                #endregion
+
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Host terminated unexpectedly!");
+                return 1;
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
 
         public static AppBuilder ConfigAvaloniaAppBuilder(AppBuilder appBuilder)
         {
             return appBuilder
-                        .UsePlatformDetect()
-                        .WithInterFont()
-                        .LogToTrace()
-                        .UseReactiveUI();
+                .UsePlatformDetect()
+                .WithInterFont()
+                .LogToTrace()
+                .UseReactiveUI();
         }
 
         [SupportedOSPlatform("windows")]
@@ -93,7 +126,7 @@ namespace AvaloniaSample
         [SupportedOSPlatform("linux")]
         [SupportedOSPlatform("macos")]
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
-        private static void RunAppWithServiceProvider(HostApplicationBuilder hostBuilder, string[] args) 
+        private static void RunAppWithServiceProvider(HostApplicationBuilder hostBuilder, string[] args)
         {
             // add avaloniaui application and config AppBuilder
             hostBuilder.Services.AddAvaloniauiDesktopApplication<AppWithServiceProvider>(ConfigAvaloniaAppBuilder);

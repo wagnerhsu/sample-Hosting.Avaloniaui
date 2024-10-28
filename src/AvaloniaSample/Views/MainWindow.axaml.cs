@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Microsoft.Extensions.Logging;
 
 namespace AvaloniaSample.Views
 {

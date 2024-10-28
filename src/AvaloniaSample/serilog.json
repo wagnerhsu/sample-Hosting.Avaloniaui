@@ -1,0 +1,59 @@
+{
+  "Serilog": {
+    // 使用的 Serilog sink 包
+    "Using": [
+      "Serilog.Sinks.Console",
+      "Serilog.Sinks.File",
+      "Serilog.Enrichers.Thread",
+      "Serilog.Enrichers.Process",
+      "Serilog.Sinks.Seq"
+    ],
+    // 日志的最低级别
+    // "Verbose", "Debug", "Information", "Warning", "Error", "Fatal"
+    "MinimumLevel": "Debug",
+    "WriteTo": [
+      {
+        // 控制台输出
+        "Name": "Console",
+        // 控制台输出的格式
+        "Args": {
+          "outputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+        }
+      },
+      {
+        // 文件输出
+        "Name": "File",
+        "Args": {
+          // 日志文件路径
+          "path": "Logs/AvaloiaSample-.log",
+          // 文件滚动间隔（每天滚动）
+          "rollingInterval": "Day",
+          "retainedFileCountLimit": 7,
+          // 文件输出的格式
+          "outputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext}|{ProcessId}|{ThreadId} {Message:lj}{NewLine}{Exception}"
+        }
+      },
+      {
+        // Seq 输出
+        "Name": "Seq",
+        "Args": {
+          // Seq 服务器的 URL
+          "serverUrl": "http://localhost:5341",
+          // 可选：API 密钥
+          // "apiKey": "your-api-key",
+          // 日志输出的格式
+          "outputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+        },
+        // 设置 Seq 的最低日志级别为 Information
+        "restrictedToMinimumLevel": "Information"
+      }
+    ],
+    // 丰富的日志上下文
+    "Enrich": [
+      "FromLogContext",
+      "WithMachineName",
+      "WithProcessId",
+      "WithThreadId"
+    ]
+  }
+}

@@ -13,6 +13,7 @@ namespace AvaloniaSample.ViewModels
         private readonly ISomeService _someService;
         public MainWindowViewModelWithParams(ISomeService someService, ILogger<MainWindowViewModelWithParams> logger) 
         {
+            logger.LogInformation("MainWindowViewModelWithParams.ctor");
             _logger = logger;
             _someService = someService;
             Observable.Interval(TimeSpan.FromSeconds(1))
